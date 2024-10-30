@@ -1,6 +1,9 @@
 # Ignorar archivos de entorno
 .env
 
+# Ignorar archivos de datos
+*.csv
+
 # Ignorar módulos de Node.js
 node_modules/
 

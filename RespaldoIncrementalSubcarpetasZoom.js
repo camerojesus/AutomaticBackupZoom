@@ -207,33 +207,37 @@ const qs = require('qs');
         return `${day}-${month}-${year}_${dayName}`;
     };
 
-    // Función para descargar un archivo de grabación
-    const downloadRecording = async (downloadUrl, filePath) => {
-        try {
-            const token = await ensureValidToken();
+    // Función para descargar un archivo de grabación con reintentos
+    const downloadRecording = async (downloadUrl, filePath, expectedSize, retries = 5) => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                const token = await ensureValidToken();
+                const urlWithToken = `${downloadUrl}?access_token=${token}`;
+                const response = await axios.get(urlWithToken, { responseType: 'stream' });
 
-            // Agregar el token de acceso al parámetro de la URL
-            const urlWithToken = `${downloadUrl}?access_token=${token}`;
+                fs.mkdirSync(path.dirname(filePath), { recursive: true });
+                const writer = fs.createWriteStream(filePath);
+                response.data.pipe(writer);
 
-            const response = await axios.get(urlWithToken, {
-                responseType: 'stream'
-            });
+                await new Promise((resolve, reject) => {
+                    writer.on('finish', resolve);
+                    writer.on('error', reject);
+                });
 
-            // Crear el directorio si no existe
-            fs.mkdirSync(path.dirname(filePath), { recursive: true });
-
-            // Guardar el archivo
-            const writer = fs.createWriteStream(filePath);
-            response.data.pipe(writer);
-
-            return new Promise((resolve, reject) => {
-                writer.on('finish', resolve);
-                writer.on('error', reject);
-            });
-        } catch (error) {
-            console.error('Error al descargar la grabación:', error);
-            throw error;
+                const localFileSize = fs.statSync(filePath).size;
+                if (localFileSize === expectedSize) {
+                    console.log(`  Descarga exitosa en intento ${attempt}: ${filePath}`);
+                    return true; // Descarga exitosa
+                } else {
+                    console.log(`  Tamaño incorrecto en intento ${attempt}. Esperado: ${expectedSize}, Obtenido: ${localFileSize}`);
+                    fs.unlinkSync(filePath); // Eliminar archivo incorrecto
+                }
+            } catch (error) {
+                console.error(`  Error en intento ${attempt} al descargar la grabación:`, error);
+            }
         }
+        console.log(`  Fallo después de ${retries} intentos: ${filePath}`);
+        return false; // Fallo después de todos los reintentos
     };
 
     // Función principal para listar y respaldar las grabaciones
@@ -296,17 +300,14 @@ const qs = require('qs');
                                 } else {
                                     console.log(`  Tamaño del archivo local no coincide con el de Zoom. Eliminando archivo local y descargando de nuevo: ${fileName}`);
                                     fs.unlinkSync(filePath);
-                                    await downloadRecording(recordingFile.download_url, filePath);
-                                    // Después de descargar, comparar tamaños nuevamente
-                                    const newLocalFileSize = fs.statSync(filePath).size;
-                                    if (newLocalFileSize !== zoomFileSize) {
-                                        console.log(`  Error: El archivo descargado todavía tiene un tamaño incorrecto. Se eliminó el archivo local: ${fileName}`);
-                                        fs.unlinkSync(filePath);
-                                        status = 'error';
-                                    } else {
+                                    const downloadSuccess = await downloadRecording(recordingFile.download_url, filePath, recordingFile.file_size);
+                                    if (downloadSuccess) {
                                         conditionalLog(`  Archivo guardado correctamente: ${fileName}`);
                                         status = 'descargado';
                                         filesDownloaded = true;
+                                    } else {
+                                        console.log(`  Error: El archivo descargado todavía tiene un tamaño incorrecto después de reintentos. Se eliminó el archivo local: ${fileName}`);
+                                        status = 'error';
                                     }
                                 }
                             } else {
@@ -316,29 +317,15 @@ const qs = require('qs');
                         } else {
                             // Lógica para cuando el archivo no existe
                             console.log(`  El archivo no existe. Descargando: ${fileName}`);
-                            await downloadRecording(recordingFile.download_url, filePath);
+                            const downloadSuccess = await downloadRecording(recordingFile.download_url, filePath, recordingFile.file_size);
 
                             // Después de descargar, puedes verificar si la descarga fue exitosa
-                            if (fs.existsSync(filePath)) {
-                                if (fileExtension.toLowerCase() !== 'vtt') {
-                                    const localFileSize = fs.statSync(filePath).size;
-                                    const zoomFileSize = recordingFile.file_size;
-                                    if (localFileSize !== zoomFileSize) {
-                                        console.log(`  Error: El archivo descargado tiene un tamaño incorrecto. Se eliminó el archivo local: ${fileName}`);
-                                        fs.unlinkSync(filePath);
-                                        status = 'error';
-                                    } else {
-                                        conditionalLog(`  Archivo guardado correctamente: ${fileName}`);
-                                        status = 'descargado';
-                                        filesDownloaded = true;
-                                    }
-                                } else {
-                                    conditionalLog(`  Archivo .vtt guardado correctamente: ${fileName}`);
-                                    status = 'descargado';
-                                    filesDownloaded = true;
-                                }
+                            if (downloadSuccess) {
+                                conditionalLog(`  Archivo guardado correctamente: ${fileName}`);
+                                status = 'descargado';
+                                filesDownloaded = true;
                             } else {
-                                console.log(`  Error al descargar el archivo: ${fileName}`);
+                                console.log(`  Error: El archivo descargado todavía tiene un tamaño incorrecto después de reintentos. Se eliminó el archivo local: ${fileName}`);
                                 status = 'error';
                             }
                         }
