@@ -208,7 +208,7 @@ const qs = require('qs');
     };
 
     // Función para descargar un archivo de grabación con reintentos
-    const downloadRecording = async (downloadUrl, filePath, expectedSize, retries = 5) => {
+    const downloadRecording = async (downloadUrl, filePath, expectedSize, retries = 5, validateSize = true) => {
         for (let attempt = 1; attempt <= retries; attempt++) {
             try {
                 const token = await ensureValidToken();
@@ -224,13 +224,19 @@ const qs = require('qs');
                     writer.on('error', reject);
                 });
 
-                const localFileSize = fs.statSync(filePath).size;
-                if (localFileSize === expectedSize) {
-                    console.log(`  Descarga exitosa en intento ${attempt}: ${filePath}`);
-                    return true; // Descarga exitosa
+                // Validar tamaño solo si 'validateSize' es verdadero
+                if (validateSize) {
+                    const localFileSize = fs.statSync(filePath).size;
+                    if (localFileSize === expectedSize) {
+                        console.log(`  Descarga exitosa en intento ${attempt}: ${filePath}`);
+                        return true; // Descarga exitosa
+                    } else {
+                        console.log(`  Tamaño incorrecto en intento ${attempt}. Esperado: ${expectedSize}, Obtenido: ${localFileSize}`);
+                        fs.unlinkSync(filePath); // Eliminar archivo incorrecto
+                    }
                 } else {
-                    console.log(`  Tamaño incorrecto en intento ${attempt}. Esperado: ${expectedSize}, Obtenido: ${localFileSize}`);
-                    fs.unlinkSync(filePath); // Eliminar archivo incorrecto
+                    console.log(`  Descarga exitosa en intento ${attempt}: ${filePath}`);
+                    return true; // Descarga exitosa sin validar tamaño
                 }
             } catch (error) {
                 console.error(`  Error en intento ${attempt} al descargar la grabación:`, error);
@@ -317,7 +323,8 @@ const qs = require('qs');
                         } else {
                             // Lógica para cuando el archivo no existe
                             console.log(`  El archivo no existe. Descargando: ${fileName}`);
-                            const downloadSuccess = await downloadRecording(recordingFile.download_url, filePath, recordingFile.file_size);
+                            const isVttFile = fileExtension.toLowerCase() === 'vtt';
+                            const downloadSuccess = await downloadRecording(recordingFile.download_url, filePath, recordingFile.file_size, 5, validateSize = !isVttFile);
 
                             // Después de descargar, puedes verificar si la descarga fue exitosa
                             if (downloadSuccess) {
