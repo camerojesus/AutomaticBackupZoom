@@ -19,8 +19,16 @@ const qs = require('qs');
     // const nMesInicial = fechaActual.getMonth() + 1; // Los meses en JavaScript van de 0 a 11
     // const nMesFinal = nMesInicial;
 
-    const nMesInicial = 10; // Los meses en JavaScript van de 0 a 11
-    const nMesFinal = 11;
+    cTipoFiltroFecha='M'; // M=mes, D=día
+
+    if(cTipoFiltroFecha=='M'){
+        const nMesInicial = fechaActual.getMonth() + 1; // Los meses en JavaScript van de 0 a 11    
+        const nMesFinal = nMesInicial;
+    }
+
+    // Comentamos o eliminamos las variables nMesInicial y nMesFinal
+    // const nMesInicial = 10; // Los meses en JavaScript van de 0 a 11
+    // const nMesFinal = 11;
 
     let accessToken = null;
     let tokenExpirationTime = 0;
@@ -170,19 +178,16 @@ const qs = require('qs');
         return allRecordings;
     };
 
-    // Función para obtener la fecha inicial basada en nMesInicial
+    // Modificamos la función getStartDate para obtener la fecha de hace 5 días
     const getStartDate = () => {
         const date = new Date();
-        date.setMonth(nMesInicial - 1);
-        date.setDate(1);
+        date.setDate(date.getDate() - 3);
         return date.toISOString().split('T')[0];
     };
 
-    // Función para obtener la fecha final basada en nMesFinal
+    // Modificamos la función getEndDate para obtener la fecha actual
     const getEndDate = () => {
         const date = new Date();
-        date.setMonth(nMesFinal);
-        date.setDate(0);
         return date.toISOString().split('T')[0];
     };
 
