@@ -16,11 +16,11 @@ const qs = require('qs');
     // Modificar estas líneas para obtener el mes actual
     const fechaActual = new Date();
 
-    const nMesInicial = fechaActual.getMonth() + 1; // Los meses en JavaScript van de 0 a 11
-    const nMesFinal = nMesInicial;
+    // const nMesInicial = fechaActual.getMonth() + 1; // Los meses en JavaScript van de 0 a 11
+    // const nMesFinal = nMesInicial;
 
-    //const nMesInicial = 10; // Los meses en JavaScript van de 0 a 11
-    //const nMesFinal = 10;
+    const nMesInicial = 10; // Los meses en JavaScript van de 0 a 11
+    const nMesFinal = 11;
 
     let accessToken = null;
     let tokenExpirationTime = 0;
