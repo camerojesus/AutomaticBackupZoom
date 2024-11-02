@@ -181,7 +181,7 @@ const qs = require('qs');
     // Modificamos la función getStartDate para obtener la fecha de hace 5 días
     const getStartDate = () => {
         const date = new Date();
-        date.setDate(date.getDate() - 3);
+        date.setDate(date.getDate() - 32);
         return date.toISOString().split('T')[0];
     };
 

@@ -1,65 +1,55 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
-const csv = require('csv-parser');
 
-// Ruta del archivo CSV
-const csvFilePath = 'zoomus_recordings__20241029.csv'; // Cambia esta ruta por la de tu archivo CSV
-// Ruta de la carpeta principal de archivos de Zoom
-const zoomFolder = 'd:\\ReunionesZoom';
+const directory = 'd:\\ReunionesZoom';
 
-// Función para leer los IDs de las reuniones desde el CSV
-async function obtenerMeetingIds() {
-  const meetingIds = [];
-  return new Promise((resolve, reject) => {
-    fs.createReadStream(csvFilePath)
-      .pipe(csv())
-      .on('data', (row) => {
-        const meetingId = row['ID de la reunión'] || row['meeting_id']; // Asegúrate de usar el nombre correcto de la columna
-        if (meetingId) {
-          meetingIds.push(meetingId.trim());
+async function traverseDirectory(dir) {
+    try {
+        const files = await fs.readdir(dir);
+        const fileSizeMap = {}; // Inicializar fileSizeMap para el directorio actual
+
+        for (const file of files) {
+            const filePath = path.join(dir, file);
+            const stats = await fs.stat(filePath);
+
+            if (stats.isDirectory()) {
+                // Si es un directorio, recorrerlo recursivamente
+                await traverseDirectory(filePath);
+            } else {
+                // Obtener la extensión del archivo en minúsculas desde la ruta completa
+                const ext = path.extname(filePath).toLowerCase();
+                // Si es .txt o .vtt, ignorar el archivo
+                if (ext === '.txt' || ext === '.vtt') {
+                    continue;
+                }
+                const size = stats.size;
+                const key = `${size}-${ext}`; // Crear una clave combinando tamaño y extensión
+                // Almacenar archivos según su tamaño y extensión en el fileSizeMap del directorio actual
+                if (fileSizeMap[key]) {
+                    fileSizeMap[key].push(filePath);
+                } else {
+                    fileSizeMap[key] = [filePath];
+                }
+            }
         }
-      })
-      .on('end', () => resolve(meetingIds))
-      .on('error', (error) => reject(error));
-  });
-}
 
-// Función recursiva para buscar archivos que contienen el meeting_id en el nombre
-async function buscarArchivos(folderPath, meetingId) {
-  const files = fs.readdirSync(folderPath);
-  let encontrado = false;
-
-  for (const file of files) {
-    const fullPath = path.join(folderPath, file);
-    const stats = fs.statSync(fullPath);
-
-    if (stats.isDirectory()) {
-      // Si es una carpeta, llamar a la función recursivamente
-      encontrado = encontrado || buscarArchivos(fullPath, meetingId);
-    } else if (file.includes(meetingId)) {
-      console.log(`Archivo encontrado para ID ${meetingId} en: ${fullPath}`);
-      return true; // Termina la búsqueda si encuentra el archivo
+        // Buscar y mostrar archivos duplicados en el directorio actual
+        for (const key in fileSizeMap) {
+            if (fileSizeMap[key].length > 1) {
+                const [size, ext] = key.split('-');
+                console.log(`Archivos repetidos en '${dir}' de tamaño ${size} bytes y extensión ${ext}:`);
+                fileSizeMap[key].forEach(filePath => {
+                    console.log(`- ${filePath}`);
+                });
+            }
+        }
+    } catch (err) {
+        console.error(`Error al procesar el directorio ${dir}:`, err);
     }
-  }
-
-  return encontrado;
 }
 
-// Función principal
-async function verificarArchivos() {
-  try {
-    const meetingIds = await obtenerMeetingIds();
-
-    for (const meetingId of meetingIds) {
-      const encontrado = await buscarArchivos(zoomFolder, meetingId);
-      if (!encontrado) {
-        console.log(`Archivo NO encontrado para ID ${meetingId}`);
-      }
-    }
-  } catch (error) {
-    console.error('Error al leer el archivo CSV o verificar archivos:', error);
-  }
+async function main() {
+    await traverseDirectory(directory);
 }
 
-// Ejecutar el script
-verificarArchivos();
+main();
