@@ -1,5 +1,3 @@
----
-
 ## Visión General
 
 El código es un script escrito en Node.js que se encarga de:
@@ -11,8 +9,6 @@ El código es un script escrito en Node.js que se encarga de:
 5. Descargar estas grabaciones y guardarlas en el disco, organizándolas en carpetas estructuradas por correo del usuario, mes y día.
 6. Verificar que los archivos descargados tengan el tamaño esperado, reintentando la descarga si es necesario.
 7. En caso de no obtener grabaciones, limpiar las carpetas vacías creadas.
-
----
 
 ## Explicación Detallada del Código
 
@@ -290,7 +286,7 @@ const qs = require('qs');
                         console.log(`  Descarga exitosa en intento ${attempt}: ${filePath}`);
                         return true;
                     } else {
-                        console.log(`  Tamaño incorrecto en intento ${attempt}. Esperado: ${expectedSize}, Obtenido: ${localFileSize}`);
+                        console.log(`  Tamaño incorrecto en intento ${attempt}. Esperado: ${expectedSize, Obtenido: ${localFileSize}`);
                         fs.unlinkSync(filePath);
                     }
                 } else {
@@ -341,7 +337,7 @@ const qs = require('qs');
                 let downloadRecords = [];
 
                 for (const meeting of recordings) {
-                    conditionalLog(`Procesando reunión: ID ${meeting.id}, Tema: ${meeting.topic}, Fecha: ${meeting.start_time}`);
+                    conditionalLog(`Procesando reunión: ID ${meeting.id, Tema: ${meeting.topic}, Fecha: ${meeting.start_time}`);
 
                     const monthFolderName = formatMonthFolderName(meeting.start_time);
                     const dayFolderName = formatDateFolderName(meeting.start_time);
@@ -446,8 +442,6 @@ const qs = require('qs');
 ```
 - Llama a la función principal `listAndBackupRecordings()` y ejecuta todo el proceso.
 - Cierra la función autoejecutable.
-
----
 
 ## Resumen
 
