@@ -10,7 +10,7 @@ const qs = require('qs');
     const ZOOM_CLIENT_ID = process.env.ZOOM_CLIENT_ID;
     const ZOOM_CLIENT_SECRET = process.env.ZOOM_CLIENT_SECRET;
 
-    const DOWNLOAD_FOLDER = 'D:\\ReunionesZoom'; // Carpeta donde se guardarán las grabaciones
+    const DOWNLOAD_FOLDER = 'D:\\Onedrive\\ReunionesZoom'; // Carpeta donde se guardarán las grabaciones
     const bConsoleLog = false; // Constante para controlar los console.log
 
     // Modificar estas líneas para obtener el mes actual
@@ -285,6 +285,13 @@ const qs = require('qs');
 
                     for (const recordingFile of meeting.recording_files) {
                         const fileExtension = recordingFile.file_extension || 'mp4';
+
+                        // Omitir archivos .json
+                        if (fileExtension.toLowerCase() === 'json') {
+                            conditionalLog(`  Omitiendo archivo JSON: ${recordingFile.id}.${fileExtension}`);
+                            continue;
+                        }
+
                         const sanitizedTopic = sanitizarNombreArchivo(meeting.topic);
                         const fileName = `${sanitizedTopic} ${recordingFile.recording_type} ${recordingFile.id}.${fileExtension}`;
                         const filePath = path.join(meetingFolderPath, fileName);
